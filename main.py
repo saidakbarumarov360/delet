@@ -1,4 +1,5 @@
 from aiogram import Bot, Dispatcher, executor, types
+from aiogram.types import ChatMemberStatus
 import logging
 import re
 from langdetect import detect
@@ -24,6 +25,12 @@ async def delete_messages(message: types.Message):
         # Agar xabar bo'sh bo'lsa, uni o'tkazib yuborish
         if not message.text.strip():
             logging.info("Bo'sh xabar, o'chirishni o'tkazib yuborish.")
+            return
+
+        # Adminlarni tekshirish
+        user_status = await bot.get_chat_member(message.chat.id, message.from_user.id)
+        if user_status.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR]:
+            logging.info(f"Admin xabarini o'tkazib yuborish: {message.text}")
             return
 
         # Havolalar uchun tekshirish
