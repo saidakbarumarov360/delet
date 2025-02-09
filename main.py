@@ -27,11 +27,17 @@ async def delete_messages(message: types.Message):
             logging.info("Bo'sh xabar, o'chirishni o'tkazib yuborish.")
             return
 
-        # Adminlarni tekshirish
-        user_status = await bot.get_chat_member(message.chat.id, message.from_user.id)
-        if user_status.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR]:
-            logging.info(f"Admin xabarini o'tkazib yuborish: {message.text}")
+        # Anonim adminni tekshirish
+        if message.sender_chat and message.sender_chat.id == message.chat.id:
+            logging.info(f"Anonim admin xabarini o'tkazib yuborish: {message.text}")
             return
+
+        # Oddiy adminlarni tekshirish
+        if message.from_user:
+            user_status = await bot.get_chat_member(message.chat.id, message.from_user.id)
+            if user_status.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR]:
+                logging.info(f"Admin xabarini o'tkazib yuborish: {message.text}")
+                return
 
         # Havolalar uchun tekshirish
         url_match = URL_REGEX.search(message.text)
