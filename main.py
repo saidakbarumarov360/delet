@@ -3,7 +3,7 @@ from aiogram.types import ChatMemberStatus
 import logging
 import re
 
-API_TOKEN = "7833851145:AAFiKeE_jHhAhFBgeRbEzZ-Or4JwIDN00cI"
+API_TOKEN = "7833851145:AAEcYEYfCNRrCb2EM6gKkbCc1hvEkdIBkFY"
 GROUP_ID = -1001754111732
 
 logging.basicConfig(level=logging.INFO)
