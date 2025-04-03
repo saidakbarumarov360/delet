@@ -76,23 +76,21 @@ async def delete_messages(message: types.Message):
     except Exception as e:
         logging.error(f"Xatolik: {e}")
 
-# Guruhga qo'shilish xabarlarini o'chirish
-@dp.message_handler(lambda message: message.chat.id == GROUP_ID and message.new_chat_members)
-async def delete_join_messages(message: types.Message):
+# Guruhga kimdir qoʻshilganda chiqadigan xabarni oʻchirish
+@dp.message_handler(content_types=types.ContentType.NEW_CHAT_MEMBERS)
+async def delete_new_member_message(message: types.Message):
     try:
         await bot.delete_message(message.chat.id, message.message_id)
-        logging.info("Qo'shilish haqida xabar o'chirildi")
     except Exception as e:
-        logging.error(f"Xatolik: {e}")
+        print(f"Yangi a'zo xabarini oʻchirishda xatolik: {e}")
 
-# Guruhdan chiqish xabarlarini o'chirish
-@dp.message_handler(lambda message: message.chat.id == GROUP_ID and message.left_chat_member)
-async def delete_leave_messages(message: types.Message):
+# Guruhdan kimdir chiqib ketganda chiqadigan xabarni oʻchirish
+@dp.message_handler(content_types=types.ContentType.LEFT_CHAT_MEMBER)
+async def delete_left_member_message(message: types.Message):
     try:
         await bot.delete_message(message.chat.id, message.message_id)
-        logging.info("Tark etish haqida xabar o'chirildi")
     except Exception as e:
-        logging.error(f"Xatolik: {e}")
+        print(f"Chiqib ketgan a'zo xabarini oʻchirishda xatolik: {e}")
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)  # Agar muhim xabarlar o‘tkazib yuborilishini xohlamasangiz, False qo‘ying.
