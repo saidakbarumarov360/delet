@@ -3,8 +3,14 @@ from aiogram.types import ChatMemberStatus
 import logging
 import re
 
+# Bot tokeni (asl token saqlanadi)
 API_TOKEN = "7833851145:AAFiKeE_jHhAhFBgeRbEzZ-Or4JwIDN00cI"
-GROUP_ID = -1001754111732
+
+# Guruh IDlari ro'yxat shaklida
+GROUP_IDS = [
+    -1001754111732,  # Birinchi guruh IDsi (avvalgi)
+    -1007833851145       # Siz bergan guruh IDsi
+]
 
 logging.basicConfig(level=logging.INFO)
 
@@ -40,7 +46,7 @@ def is_russian_text(text):
 
     return False  # Agar hech narsa aniqlanmasa, ruscha deb hisoblamaymiz
 
-@dp.message_handler(lambda message: message.chat.id == GROUP_ID)
+@dp.message_handler(lambda message: message.chat.id in GROUP_IDS)
 async def delete_messages(message: types.Message):
     try:
         if not message.text or not message.text.strip():
@@ -80,7 +86,8 @@ async def delete_messages(message: types.Message):
 @dp.message_handler(content_types=types.ContentType.NEW_CHAT_MEMBERS)
 async def delete_new_member_message(message: types.Message):
     try:
-        await bot.delete_message(message.chat.id, message.message_id)
+        if message.chat.id in GROUP_IDS:
+            await bot.delete_message(message.chat.id, message.message_id)
     except Exception as e:
         print(f"Yangi a'zo xabarini oʻchirishda xatolik: {e}")
 
@@ -88,10 +95,10 @@ async def delete_new_member_message(message: types.Message):
 @dp.message_handler(content_types=types.ContentType.LEFT_CHAT_MEMBER)
 async def delete_left_member_message(message: types.Message):
     try:
-        await bot.delete_message(message.chat.id, message.message_id)
+        if message.chat.id in GROUP_IDS:
+            await bot.delete_message(message.chat.id, message.message_id)
     except Exception as e:
         print(f"Chiqib ketgan a'zo xabarini oʻchirishda xatolik: {e}")
 
 if __name__ == "__main__":
     executor.start_polling(dp, skip_updates=True)  # Agar muhim xabarlar o‘tkazib yuborilishini xohlamasangiz, False qo‘ying.
-                    
