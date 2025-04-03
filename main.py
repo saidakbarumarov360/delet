@@ -22,9 +22,16 @@ async def send_welcome(message: types.Message):
     await message.reply("Assalomu alaykum! Bu bot sizga yordam berish uchun tayyor. 😊")
 
 # To'g'ri regex
-URL_REGEX = re.compile(r"(https?:\/\/[^\s]+|www\.[^\s]+)")
-
-# O‘zbekcha krill harflari
+# To'g'ri regex (yangi universal RegEx)
+URL_REGEX = re.compile(
+    r'(?:(?:https?|ftp):\/\/)?(?:\S+(?::\S*)?@)?(?:'
+    r'(?![0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\b)'
+    r'[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}'
+    r'(?::\d+)?(?:\/[^?#\s]*)?(?:\?[^#\s]*)?(?:#[\S]*)?|'
+    r'www\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.[a-z]{2,}'
+    r'(?::\d+)?(?:\/[^?#\s]*)?(?:\?[^#\s]*)?(?:#[\S]*)?)',
+    re.IGNORECASE
+)
 UZBEK_CYRILLIC_LETTERS = set("ўқғҳ")  # O‘zbek tiliga xos harflar
 RUSSIAN_CYRILLIC_LETTERS = set("ёыэъщ")  # Rus tiliga xos harflar
 
