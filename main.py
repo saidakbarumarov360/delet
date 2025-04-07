@@ -4,7 +4,7 @@ import logging
 import re
 
 API_TOKEN = "7833851145:AAEcYEYfCNRrCb2EM6gKkbCc1hvEkdIBkFY"
-GROUP_IDS = [-1001754111732, -1007833851145]  # List of group IDs
+GROUP_IDS = [-1001754111732,-1007833851145]  # List of group IDs
 
 logging.basicConfig(level=logging.INFO)
 
