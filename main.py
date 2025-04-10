@@ -28,7 +28,7 @@ URL_REGEX = re.compile(
 )
 
 # O‘zbekcha va ruscha harflar
-UZBEK_CYRILLIC_LETTERS = set("ўқғҳой")
+UZBEK_CYRILLIC_LETTERS = set("ўқғҳаой")
 RUSSIAN_CYRILLIC_LETTERS = set("ёыэъщ")
 RUSSIAN_COMMON_LETTERS = set("абвгдежзийклмнопрстуфхцчшщъыьэюяё")  # Ruscha umumiy harflar
 
