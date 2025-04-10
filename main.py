@@ -2,10 +2,11 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import ChatMemberStatus
 import logging
 import re
+import transliterate  # transliterate.py faylini import qilamiz
 
 # Bot token va guruh ID’lari
 API_TOKEN = "7833851145:AAEcYEYfCNRrCb2EM6gKkbCc1hvEkdIBkFY"
-GROUP_IDS = [-1001754111732, -1002520242281]  # Ikkala guruh ID
+GROUP_IDS = [-1001754111732, -1007833851145]  # Ikkala guruh ID
 
 # Logging sozlamalari
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -13,82 +14,51 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
-# transliterate.py dan olingan lug‘atlar va funksiyalar
-LATIN_TO_CYRILLIC = {
-    'a': 'а', 'A': 'А', 'b': 'б', 'B': 'Б', 'd': 'д', 'D': 'Д', 'e': 'е', 'E': 'Е',
-    'f': 'ф', 'F': 'Ф', 'g': 'г', 'G': 'Г', 'h': 'ҳ', 'H': 'Ҳ', 'i': 'и', 'I': 'И',
-    'j': 'ж', 'J': 'Ж', 'k': 'к', 'K': 'К', 'l': 'л', 'L': 'Л', 'm': 'м', 'M': 'М',
-    'n': 'н', 'N': 'Н', 'o': 'о', 'O': 'О', 'p': 'п', 'P': 'П', 'q': 'қ', 'Q': 'Қ',
-    'r': 'р', 'R': 'Р', 's': 'с', 'S': 'С', 't': 'т', 'T': 'Т', 'u': 'у', 'U': 'У',
-    'v': 'в', 'V': 'В', 'x': 'х', 'X': 'Х', 'y': 'й', 'Y': 'Й', 'z': 'з', 'Z': 'З',
-    'ʼ': 'ъ',
-}
-
-CYRILLIC_TO_LATIN = {
-    'а': 'a', 'А': 'A', 'б': 'b', 'Б': 'B', 'в': 'v', 'В': 'V', 'г': 'g', 'Г': 'G',
-    'д': 'd', 'Д': 'D', 'е': 'e', 'Е': 'E', 'ё': 'yo', 'Ё': 'Yo', 'ж': 'j', 'Ж': 'J',
-    'з': 'z', 'З': 'Z', 'и': 'i', 'И': 'I', 'й': 'y', 'Й': 'Y', 'к': 'k', 'К': 'K',
-    'л': 'l', 'Л': 'L', 'м': 'm', 'М': 'M', 'н': 'n', 'Н': 'N', 'о': 'o', 'О': 'O',
-    'п': 'p', 'П': 'P', 'р': 'r', 'Р': 'R', 'с': 's', 'С': 'S', 'т': 't', 'Т': 'T',
-    'у': 'u', 'У': 'U', 'ф': 'f', 'Ф': 'F', 'х': 'x', 'Х': 'X', 'ц': 's', 'Ц': 'S',
-    'ч': 'ch', 'Ч': 'Ch', 'ш': 'sh', 'Ш': 'Sh', 'ъ': 'ʼ', 'ь': '', 'Ь': '',
-    'э': 'e', 'Э': 'E', 'ю': 'yu', 'Ю': 'Yu', 'я': 'ya', 'Я': 'Ya', 'ў': 'oʻ', 'Ў': 'Oʻ',
-    'қ': 'q', 'Қ': 'Q', 'ғ': 'gʻ', 'Ғ': 'Gʻ', 'ҳ': 'h', 'Ҳ': 'H',
-}
-
-LATIN_VOWELS = ('a', 'A', 'e', 'E', 'i', 'I', 'o', 'O', 'u', 'U', 'o‘', 'O‘')
-CYRILLIC_VOWELS = ('а', 'А', 'е', 'Е', 'ё', 'Ё', 'и', 'И', 'о', 'О', 'у', 'У', 'э', 'Э', 'ю', 'Ю', 'я', 'Я', 'ў', 'Ў')
-
-# Ruscha harflarga xos belgilar
-RUSSIAN_CYRILLIC_SPECIFIC = set("ёыэъщ")
-
-# Start buyrug‘i
-@dp.message_handler(commands=["start"])
-async def send_welcome(message: types.Message):
-    await message.reply("Assalomu alaykum! Bu bot sizga yordam berish uchun tayyor. 😊")
-
 # Mukammal URL regex
 URL_REGEX = re.compile(
     r"(?i)(https?://|www\.)[-\w.]+\.[a-z]{2,}([:/][-a-z0-9@:%._+~#=]*)?(\?[;&a-z0-9%_=-]+)?(#[-\w]+)?"
 )
 
-def to_cyrillic(text):
-    """Lotin matnni kirillchaga aylantirish"""
-    compounds_first = {
-        'ch': 'ч', 'Ch': 'Ч', 'CH': 'Ч', 'sh': 'ш', 'Sh': 'Ш', 'SH': 'Ш', 'yo‘': 'йў', 'Yo‘': 'Йў', 'YO‘': 'ЙЎ'
-    }
-    compounds_second = {
-        'yo': 'ё', 'Yo': 'Ё', 'YO': 'Ё', 'yu': 'ю', 'Yu': 'Ю', 'YU': 'Ю', 'ya': 'я', 'Ya': 'Я', 'YA': 'Я',
-        'ye': 'е', 'Ye': 'Е', 'YE': 'Е', 'o‘': 'ў', 'O‘': 'Ў', 'oʻ': 'ў', 'Oʻ': 'Ў', 'g‘': 'ғ', 'G‘': 'Ғ', 'gʻ': 'ғ', 'Gʻ': 'Ғ'
-    }
-    beginning_rules = {'ye': 'е', 'Ye': 'Е', 'YE': 'Е', 'e': 'э', 'E': 'Э'}
-    after_vowel_rules = {'ye': 'е', 'Ye': 'Е', 'YE': 'Е', 'e': 'э', 'E': 'Э'}
+# Ruscha xos harflar
+RUSSIAN_CYRILLIC_SPECIFIC = set("ёыэъщ")
+UZBEK_CYRILLIC_SPECIFIC = set("ўқғҳ")
 
-    text = text.replace('ʻ', '‘')
+def is_cyrillic_or_latin(text):
+    """
+    Matn kirillcha yoki lotincha ekanligini tekshiradi.
+    Agar ikkalasi ham bo‘lmasa, False qaytaradi.
+    """
+    # Kirillcha harflar mavjudligini tekshirish
+    has_cyrillic = any(char in transliterate.CYRILLIC_TO_LATIN for char in text)
     
-    # Harf birikmalarini almashtirish
-    text = re.sub(r'(%s)' % '|'.join(compounds_first.keys()), lambda x: compounds_first[x.group(1)], text, flags=re.U)
-    text = re.sub(r'(%s)' % '|'.join(compounds_second.keys()), lambda x: compounds_second[x.group(1)], text, flags=re.U)
-    text = re.sub(r'\b(%s)' % '|'.join(beginning_rules.keys()), lambda x: beginning_rules[x.group(1)], text, flags=re.U)
-    text = re.sub(r'(%s)(%s)' % ('|'.join(LATIN_VOWELS), '|'.join(after_vowel_rules.keys())), 
-                  lambda x: '%s%s' % (x.group(1), after_vowel_rules[x.group(2)]), text, flags=re.U)
-    text = re.sub(r'(%s)' % '|'.join(LATIN_TO_CYRILLIC.keys()), lambda x: LATIN_TO_CYRILLIC[x.group(1)], text, flags=re.U)
+    # Lotincha harflar mavjudligini tekshirish
+    has_latin = any(char in transliterate.LATIN_TO_CYRILLIC for char in text)
     
-    return text
+    # Agar hech biri bo‘lmasa, False qaytaradi
+    is_valid = has_cyrillic or has_latin
+    
+    logging.info(f"Matn: {text}, Kirillcha: {has_cyrillic}, Lotincha: {has_latin}, To‘g‘ri: {is_valid}")
+    return is_valid
 
 def is_russian_text(text):
     """
     Matnni kirillchaga aylantirib, ruscha ekanligini tekshiradi.
-    Agar ruscha xos harflar (ё, ы, э, ъ, щ) bo‘lsa, True qaytaradi.
+    Agar ruscha xos harflar bo‘lsa va o‘zbekcha harflar bo‘lmasa, True qaytaradi.
     """
-    # Agar matn allaqachon kirillcha bo‘lsa, to‘g‘ridan-to‘g‘ri ishlatamiz, aks holda aylantiramiz
-    cyrillic_text = text if any(c in text for c in CYRILLIC_TO_LATIN) else to_cyrillic(text)
+    cyrillic_text = text if any(c in text for c in transliterate.CYRILLIC_TO_LATIN) else transliterate.to_cyrillic(text)
     
-    # Ruscha xos harflar mavjudligini tekshirish
     has_russian_chars = any(char in RUSSIAN_CYRILLIC_SPECIFIC for char in cyrillic_text)
+    has_uzbek_chars = any(char in UZBEK_CYRILLIC_SPECIFIC for char in cyrillic_text)
     
-    logging.info(f"Matn: {text}, Kirillcha: {cyrillic_text}, Ruscha harflar: {has_russian_chars}")
-    return has_russian_chars
+    is_russian = has_russian_chars and not has_uzbek_chars
+    
+    logging.info(f"Matn: {text}, Kirillcha: {cyrillic_text}, Ruscha harflar: {has_russian_chars}, O‘zbekcha harflar: {has_uzbek_chars}, Ruscha: {is_russian}")
+    return is_russian
+
+# Start buyrug‘i
+@dp.message_handler(commands=["start"])
+async def send_welcome(message: types.Message):
+    await message.reply("Assalomu alaykum! Bu bot sizga yordam berish uchun tayyor. 😊")
 
 # Yangi a’zo qo‘shilganda xabarni o‘chirish
 @dp.message_handler(content_types=types.ContentType.NEW_CHAT_MEMBERS)
@@ -129,6 +99,12 @@ async def delete_messages(message: types.Message):
         if URL_REGEX.search(message.text):
             await bot.delete_message(message.chat.id, message.message_id)
             logging.info(f"Havola o‘chirildi: {message.text}, Guruh: {message.chat.id}")
+            return
+
+        # Kirillcha yoki lotincha ekanligini tekshirish
+        if not is_cyrillic_or_latin(message.text):
+            await bot.delete_message(message.chat.id, message.message_id)
+            logging.info(f"Kirillcha yoki lotincha emas, o‘chirildi: {message.text}, Guruh: {message.chat.id}")
             return
 
         # Ruscha matn tekshiruvi
