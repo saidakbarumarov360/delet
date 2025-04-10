@@ -1,2 +1,3 @@
 aiogram==2.14
 langdetect
+polyglot
