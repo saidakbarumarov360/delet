@@ -5,7 +5,7 @@ import re
 
 # Bot token va guruh ID’lari
 API_TOKEN = "7833851145:AAEcYEYfCNRrCb2EM6gKkbCc1hvEkdIBkFY"
-GROUP_IDS = [-1001754111732,-1007833851145]  # Ikkala guruh ID
+GROUP_IDS = [-1001754111732,-1002520242281]  # Ikkala guruh ID
 
 # Logging sozlamalari
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
