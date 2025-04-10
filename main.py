@@ -2,11 +2,10 @@ from aiogram import Bot, Dispatcher, executor, types
 from aiogram.types import ChatMemberStatus
 import logging
 import re
-from polyglot.detect import Detector
 
 # Bot token va guruh ID’lari
 API_TOKEN = "7833851145:AAEcYEYfCNRrCb2EM6gKkbCc1hvEkdIBkFY"
-GROUP_IDS = [-1001754111732, -1007833851145]  # Ikkala guruh ID
+GROUP_IDS = [-1001754111732, -1002520242281]  # Ikkala guruh ID
 
 # Logging sozlamalari
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -28,19 +27,44 @@ URL_REGEX = re.compile(
     r"(#[-\w]+)?"            # Fragment
 )
 
-def is_russian_text(text):
+# O‘zbekcha va ruscha harflar
+UZBEK_CYRILLIC_LETTERS = set("ўқғҳй")
+RUSSIAN_CYRILLIC_LETTERS = set("ёыэъщ")
+RUSSIAN_COMMON_LETTERS = set("абвгдежзийклмнопрстуфхцчшщъыьэюяё")  # Ruscha umumiy harflar
+
+def is_russian_text(text, threshold=0.98):
     """
-    Polyglot yordamida matnning ruscha ekanligini aniqlaydi.
-    Agar asosiy til 'ru' bo‘lsa, True qaytaradi.
+    Matnni so‘zlar bo‘yicha tahlil qilib, ruscha so‘zlar foizini hisoblaydi.
+    Agar ruscha so‘zlar 70% dan oshsa, True qaytaradi.
     """
-    try:
-        detector = Detector(text, quiet=True)  # quiet=True xatolik xabarlarini yashiradi
-        main_language = detector.language.code
-        logging.info(f"Matn: {text}, Aniqlangan til: {main_language}")
-        return main_language == "ru"
-    except Exception as e:
-        logging.error(f"Polyglot xatoligi: {e}")
-        return False  # Xatolik bo‘lsa, ruscha deb hisoblamaymiz
+    # Matnni so‘zlarga ajratish (bo‘shliq va tinish belgilari bo‘yicha)
+    words = re.split(r"\s+|[.,!?;]", text.lower())
+    words = [word for word in words if word]  # Bo‘sh so‘zlarni olib tashlash
+    
+    if not words:  # Agar matnda so‘z bo‘lmasa
+        return False
+
+    russian_word_count = 0
+    total_words = len(words)
+
+    for word in words:
+        word_set = set(word)
+        
+        # Agar so‘zda ruscha xos harflar bo‘lsa, ruscha deb hisoblaymiz
+        if word_set & RUSSIAN_CYRILLIC_LETTERS:
+            russian_word_count += 1
+            continue
+        
+        # Agar so‘z faqat ruscha harflardan iborat bo‘lsa va o‘zbekcha harflar yo‘q bo‘lsa
+        if word_set.issubset(RUSSIAN_COMMON_LETTERS) and not (word_set & UZBEK_CYRILLIC_LETTERS):
+            if len(word) > 1:  # 1 harfli so‘zlarni hisoblamaymiz
+                russian_word_count += 1
+
+    # Ruscha so‘zlar foizini hisoblash
+    russian_percentage = russian_word_count / total_words
+    logging.info(f"Ruscha so‘zlar foizi: {russian_percentage:.2%} ({russian_word_count}/{total_words}) - {text}")
+    
+    return russian_percentage >= threshold
 
 # Yangi a’zo qo‘shilganda xabarni o‘chirish
 @dp.message_handler(content_types=types.ContentType.NEW_CHAT_MEMBERS)
@@ -68,10 +92,7 @@ async def delete_messages(message: types.Message):
     try:
         # Bo‘sh xabar yoki maxsus eventlarni o‘tkazib yuborish
         if not message.text or message.new_chat_members or message.left_chat_member:
-            return
-
-        # Admin tekshiruvi
-        if message.from_user:
+            returnif message.from_user:
             user_status = await bot.get_chat_member(message.chat.id, message.from_user.id)
             if user_status.status in [ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR]:
                 logging.info(f"Admin xabari: {message.from_user.id} - {message.text}")
@@ -83,16 +104,16 @@ async def delete_messages(message: types.Message):
             logging.info(f"Havola o‘chirildi: {message.text}, Guruh: {message.chat.id}")
             return
 
-        # Ruscha matn tekshiruvi (Polyglot bilan)
-        if is_russian_text(message.text):
+        # Ruscha matn tekshiruvi (70% threshold bilan)
+        if is_russian_text(message.text, threshold=0.7):
             await bot.delete_message(message.chat.id, message.message_id)
-            logging.info(f"Ruscha xabar o‘chirildi: {message.text}, Guruh: {message.chat.id}")
+            logging.info(f"Ruscha xabar o‘chirildi (70%+): {message.text}, Guruh: {message.chat.id}")
             return
 
     except Exception as e:
         logging.error(f"Xatolik yuz berdi: {e}, Guruh: {message.chat.id}")
 
 # Botni ishga tushirish
-if __name__ == "__main__":
+if name == "main":
     logging.info("Bot ishga tushdi!")
     executor.start_polling(dp, skip_updates=True)
