@@ -32,7 +32,7 @@ UZBEK_CYRILLIC_LETTERS = set("ўқғҳ")
 RUSSIAN_CYRILLIC_LETTERS = set("ёыэъщ")
 RUSSIAN_COMMON_LETTERS = set("абвгдежзийклмнопрстуфхцчшщъыьэюяё")  # Ruscha umumiy harflar
 
-def is_russian_text(text, threshold=0.7):
+def is_russian_text(text, threshold=0.9):
     """
     Matnni so‘zlar bo‘yicha tahlil qilib, ruscha so‘zlar foizini hisoblaydi.
     Agar ruscha so‘zlar 70% dan oshsa, True qaytaradi.
