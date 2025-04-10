@@ -13,6 +13,35 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher(bot)
 
+# transliterate.py dan olingan lug‘atlar va funksiyalar
+LATIN_TO_CYRILLIC = {
+    'a': 'а', 'A': 'А', 'b': 'б', 'B': 'Б', 'd': 'д', 'D': 'Д', 'e': 'е', 'E': 'Е',
+    'f': 'ф', 'F': 'Ф', 'g': 'г', 'G': 'Г', 'h': 'ҳ', 'H': 'Ҳ', 'i': 'и', 'I': 'И',
+    'j': 'ж', 'J': 'Ж', 'k': 'к', 'K': 'К', 'l': 'л', 'L': 'Л', 'm': 'м', 'M': 'М',
+    'n': 'н', 'N': 'Н', 'o': 'о', 'O': 'О', 'p': 'п', 'P': 'П', 'q': 'қ', 'Q': 'Қ',
+    'r': 'р', 'R': 'Р', 's': 'с', 'S': 'С', 't': 'т', 'T': 'Т', 'u': 'у', 'U': 'У',
+    'v': 'в', 'V': 'В', 'x': 'х', 'X': 'Х', 'y': 'й', 'Y': 'Й', 'z': 'з', 'Z': 'З',
+    'ʼ': 'ъ',
+}
+
+CYRILLIC_TO_LATIN = {
+    'а': 'a', 'А': 'A', 'б': 'b', 'Б': 'B', 'в': 'v', 'В': 'V', 'г': 'g', 'Г': 'G',
+    'д': 'd', 'Д': 'D', 'е': 'e', 'Е': 'E', 'ё': 'yo', 'Ё': 'Yo', 'ж': 'j', 'Ж': 'J',
+    'з': 'z', 'З': 'Z', 'и': 'i', 'И': 'I', 'й': 'y', 'Й': 'Y', 'к': 'k', 'К': 'K',
+    'л': 'l', 'Л': 'L', 'м': 'm', 'М': 'M', 'н': 'n', 'Н': 'N', 'о': 'o', 'О': 'O',
+    'п': 'p', 'П': 'P', 'р': 'r', 'Р': 'R', 'с': 's', 'С': 'S', 'т': 't', 'Т': 'T',
+    'у': 'u', 'У': 'U', 'ф': 'f', 'Ф': 'F', 'х': 'x', 'Х': 'X', 'ц': 's', 'Ц': 'S',
+    'ч': 'ch', 'Ч': 'Ch', 'ш': 'sh', 'Ш': 'Sh', 'ъ': 'ʼ', 'ь': '', 'Ь': '',
+    'э': 'e', 'Э': 'E', 'ю': 'yu', 'Ю': 'Yu', 'я': 'ya', 'Я': 'Ya', 'ў': 'oʻ', 'Ў': 'Oʻ',
+    'қ': 'q', 'Қ': 'Q', 'ғ': 'gʻ', 'Ғ': 'Gʻ', 'ҳ': 'h', 'Ҳ': 'H',
+}
+
+LATIN_VOWELS = ('a', 'A', 'e', 'E', 'i', 'I', 'o', 'O', 'u', 'U', 'o‘', 'O‘')
+CYRILLIC_VOWELS = ('а', 'А', 'е', 'Е', 'ё', 'Ё', 'и', 'И', 'о', 'О', 'у', 'У', 'э', 'Э', 'ю', 'Ю', 'я', 'Я', 'ў', 'Ў')
+
+# Ruscha harflarga xos belgilar
+RUSSIAN_CYRILLIC_SPECIFIC = set("ёыэъщ")
+
 # Start buyrug‘i
 @dp.message_handler(commands=["start"])
 async def send_welcome(message: types.Message):
@@ -20,42 +49,46 @@ async def send_welcome(message: types.Message):
 
 # Mukammal URL regex
 URL_REGEX = re.compile(
-    r"(?i)(https?://|www\.)"  # Protokol yoki www (case-insensitive)
-    r"[-\w.]+\.[a-z]{2,}"     # Domen nomi
-    r"([:/][-a-z0-9@:%._+~#=]*)?"  # Yo‘l
-    r"(\?[;&a-z0-9%_=-]+)?"  # Parametrlar
-    r"(#[-\w]+)?"            # Fragment
+    r"(?i)(https?://|www\.)[-\w.]+\.[a-z]{2,}([:/][-a-z0-9@:%._+~#=]*)?(\?[;&a-z0-9%_=-]+)?(#[-\w]+)?"
 )
 
-# O‘zbekcha va ruscha harflar
-UZBEK_CYRILLIC_LETTERS = set("ўқғҳ")
-RUSSIAN_CYRILLIC_LETTERS = set("ёыэъщ")
-RUSSIAN_COMMON_LETTERS = set("абвгдежзийклмнопрстуфхцчшщъыьэюяё")  # Ruscha umumiy harflar
+def to_cyrillic(text):
+    """Lotin matnni kirillchaga aylantirish"""
+    compounds_first = {
+        'ch': 'ч', 'Ch': 'Ч', 'CH': 'Ч', 'sh': 'ш', 'Sh': 'Ш', 'SH': 'Ш', 'yo‘': 'йў', 'Yo‘': 'Йў', 'YO‘': 'ЙЎ'
+    }
+    compounds_second = {
+        'yo': 'ё', 'Yo': 'Ё', 'YO': 'Ё', 'yu': 'ю', 'Yu': 'Ю', 'YU': 'Ю', 'ya': 'я', 'Ya': 'Я', 'YA': 'Я',
+        'ye': 'е', 'Ye': 'Е', 'YE': 'Е', 'o‘': 'ў', 'O‘': 'Ў', 'oʻ': 'ў', 'Oʻ': 'Ў', 'g‘': 'ғ', 'G‘': 'Ғ', 'gʻ': 'ғ', 'Gʻ': 'Ғ'
+    }
+    beginning_rules = {'ye': 'е', 'Ye': 'Е', 'YE': 'Е', 'e': 'э', 'E': 'Э'}
+    after_vowel_rules = {'ye': 'е', 'Ye': 'Е', 'YE': 'Е', 'e': 'э', 'E': 'Э'}
+
+    text = text.replace('ʻ', '‘')
+    
+    # Harf birikmalarini almashtirish
+    text = re.sub(r'(%s)' % '|'.join(compounds_first.keys()), lambda x: compounds_first[x.group(1)], text, flags=re.U)
+    text = re.sub(r'(%s)' % '|'.join(compounds_second.keys()), lambda x: compounds_second[x.group(1)], text, flags=re.U)
+    text = re.sub(r'\b(%s)' % '|'.join(beginning_rules.keys()), lambda x: beginning_rules[x.group(1)], text, flags=re.U)
+    text = re.sub(r'(%s)(%s)' % ('|'.join(LATIN_VOWELS), '|'.join(after_vowel_rules.keys())), 
+                  lambda x: '%s%s' % (x.group(1), after_vowel_rules[x.group(2)]), text, flags=re.U)
+    text = re.sub(r'(%s)' % '|'.join(LATIN_TO_CYRILLIC.keys()), lambda x: LATIN_TO_CYRILLIC[x.group(1)], text, flags=re.U)
+    
+    return text
 
 def is_russian_text(text):
     """
-    Matnni so‘zlar bo‘yicha tahlil qilib, ruscha so‘zlar mavjudligini aniqlaydi.
-    Agar birorta so‘z ruscha bo‘lsa, True qaytaradi.
+    Matnni kirillchaga aylantirib, ruscha ekanligini tekshiradi.
+    Agar ruscha xos harflar (ё, ы, э, ъ, щ) bo‘lsa, True qaytaradi.
     """
-    # Matnni so‘zlarga ajratish (bo‘shliq va tinish belgilari bo‘yicha)
-    words = re.split(r"\s+|[.,!?;]", text.lower())
+    # Agar matn allaqachon kirillcha bo‘lsa, to‘g‘ridan-to‘g‘ri ishlatamiz, aks holda aylantiramiz
+    cyrillic_text = text if any(c in text for c in CYRILLIC_TO_LATIN) else to_cyrillic(text)
     
-    for word in words:
-        if not word:  # Bo‘sh so‘zni o‘tkazib yuborish
-            continue
-        word_set = set(word)
-        
-        # Agar so‘zda ruscha xos harflar bo‘lsa, darhol ruscha deb hisoblaymiz
-        if word_set & RUSSIAN_CYRILLIC_LETTERS:
-            return True
-        
-        # Agar so‘zda faqat ruscha harflar bo‘lsa va o‘zbekcha harflar yo‘q bo‘lsa
-        if word_set.issubset(RUSSIAN_COMMON_LETTERS) and not (word_set & UZBEK_CYRILLIC_LETTERS):
-            # So‘z kamida 2 harfdan iborat bo‘lsa va ruscha bo‘lishi mumkinligini tekshirish
-            if len(word) > 1:
-                return True
-
-    return False
+    # Ruscha xos harflar mavjudligini tekshirish
+    has_russian_chars = any(char in RUSSIAN_CYRILLIC_SPECIFIC for char in cyrillic_text)
+    
+    logging.info(f"Matn: {text}, Kirillcha: {cyrillic_text}, Ruscha harflar: {has_russian_chars}")
+    return has_russian_chars
 
 # Yangi a’zo qo‘shilganda xabarni o‘chirish
 @dp.message_handler(content_types=types.ContentType.NEW_CHAT_MEMBERS)
