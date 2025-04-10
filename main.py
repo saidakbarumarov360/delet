@@ -5,7 +5,7 @@ import re
 
 # Bot token va guruh ID’lari
 API_TOKEN = "7833851145:AAEcYEYfCNRrCb2EM6gKkbCc1hvEkdIBkFY"
-GROUP_IDS = [-1001754111732, -1007833851145]  # Ikkala guruh ID
+GROUP_IDS = [-1001754111732,-1007833851145]  # Ikkala guruh ID
 
 # Logging sozlamalari
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -27,14 +27,6 @@ URL_REGEX = re.compile(
     r"(#[-\w]+)?"            # Fragment
 )
 
-# Mukammal qo‘shilish/chiqish regex (ko‘p tilli qo‘llab-quvvatlash)
-JOIN_LEFT_REGEX = re.compile(
-    r"(joined the group|left the group|was added by|"
-    r"группага қўшилди|гуруҳдан чиқди|томонидан қўшилди|"
-    r"присоединился к группе|покинул группу|был добавлен)", 
-    re.IGNORECASE
-)
-
 # O‘zbekcha va ruscha harflar
 UZBEK_CYRILLIC_LETTERS = set("ўқғҳ")
 RUSSIAN_CYRILLIC_LETTERS = set("ёыэъщ")
@@ -47,12 +39,32 @@ def is_russian_text(text):
         return True
     return False
 
-# Guruh xabarlarini boshqarish
+# Yangi a’zo qo‘shilganda xabarni o‘chirish
+@dp.message_handler(content_types=types.ContentType.NEW_CHAT_MEMBERS)
+async def delete_new_member_message(message: types.Message):
+    if message.chat.id in GROUP_IDS:
+        try:
+            await bot.delete_message(message.chat.id, message.message_id)
+            logging.info(f"Yangi a’zo xabari o‘chirildi: Guruh ID {message.chat.id}")
+        except Exception as e:
+            logging.error(f"Yangi a’zo xabarini o‘chirishda xatolik: {e}, Guruh: {message.chat.id}")
+
+# A’zo chiqib ketganda xabarni o‘chirish
+@dp.message_handler(content_types=types.ContentType.LEFT_CHAT_MEMBER)
+async def delete_left_member_message(message: types.Message):
+    if message.chat.id in GROUP_IDS:
+        try:
+            await bot.delete_message(message.chat.id, message.message_id)
+            logging.info(f"Chiqib ketgan a’zo xabari o‘chirildi: Guruh ID {message.chat.id}")
+        except Exception as e:
+            logging.error(f"Chiqib ketgan a’zo xabarini o‘chirishda xatolik: {e}, Guruh: {message.chat.id}")
+
+# Oddiy xabarlar uchun handler (havola va ruscha matn)
 @dp.message_handler(lambda message: message.chat.id in GROUP_IDS)
 async def delete_messages(message: types.Message):
     try:
-        # Bo‘sh xabarni o‘tkazib yuborish
-        if not message.text and not message.new_chat_members and not message.left_chat_member:
+        # Bo‘sh xabar yoki maxsus eventlarni o‘tkazib yuborish
+        if not message.text or message.new_chat_members or message.left_chat_member:
             return
 
         # Admin tekshiruvi
@@ -62,29 +74,20 @@ async def delete_messages(message: types.Message):
                 logging.info(f"Admin xabari: {message.from_user.id} - {message.text}")
                 return
 
-        # Yangi a’zo yoki chiqib ketish xabarlari (content_types o‘rniga)
-        if message.new_chat_members or message.left_chat_member or JOIN_LEFT_REGEX.search(message.text or ""):
-            await bot.delete_message(message.chat.id, message.message_id)
-            logging.info(f"Qo‘shilish/chiqish xabari o‘chirildi: {message.chat.id}")
-            return
-
         # Havola tekshiruvi
-        if URL_REGEX.search(message.text or ""):
+        if URL_REGEX.search(message.text):
             await bot.delete_message(message.chat.id, message.message_id)
-            logging.info(f"Havola o‘chirildi: {message.text}")
+            logging.info(f"Havola o‘chirildi: {message.text}, Guruh: {message.chat.id}")
             return
 
         # Ruscha matn tekshiruvi
-        if is_russian_text(message.text or ""):
+        if is_russian_text(message.text):
             await bot.delete_message(message.chat.id, message.message_id)
-            logging.info(f"Ruscha xabar o‘chirildi: {message.text}")
+            logging.info(f"Ruscha xabar o‘chirildi: {message.text}, Guruh: {message.chat.id}")
             return
 
     except Exception as e:
-        logging.error(f"Xatolik yuz berdi: {e}")
-        # Bot guruhda ishlay olishini tekshirish uchun
-        if "Forbidden" in str(e):
-            logging.error(f"Botda {message.chat.id} guruhida ruxsat yo‘q!")
+        logging.error(f"Xatolik yuz berdi: {e}, Guruh: {message.chat.id}")
 
 # Botni ishga tushirish
 if __name__ == "__main__":
