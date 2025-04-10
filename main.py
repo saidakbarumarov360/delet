@@ -5,7 +5,7 @@ import re
 
 # Bot token va guruh ID’lari
 API_TOKEN = "7833851145:AAEcYEYfCNRrCb2EM6gKkbCc1hvEkdIBkFY"
-GROUP_IDS = [-1001754111732,-1002520242281]  # Ikkala guruh ID
+GROUP_IDS = [-1001754111732, -1002520242281]  # Ikkala guruh ID
 
 # Logging sozlamalari
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -30,14 +30,41 @@ URL_REGEX = re.compile(
 # O‘zbekcha va ruscha harflar
 UZBEK_CYRILLIC_LETTERS = set("ўқғҳ")
 RUSSIAN_CYRILLIC_LETTERS = set("ёыэъщ")
+RUSSIAN_COMMON_LETTERS = set("абвгдежзийклмнопрстуфхцчшщъыьэюяё")  # Ruscha umumiy harflar
 
-def is_russian_text(text):
-    text_set = set(text.lower())
-    if text_set & UZBEK_CYRILLIC_LETTERS:
+def is_russian_text(text, threshold=0.7):
+    """
+    Matnni so‘zlar bo‘yicha tahlil qilib, ruscha so‘zlar foizini hisoblaydi.
+    Agar ruscha so‘zlar 70% dan oshsa, True qaytaradi.
+    """
+    # Matnni so‘zlarga ajratish (bo‘shliq va tinish belgilari bo‘yicha)
+    words = re.split(r"\s+|[.,!?;]", text.lower())
+    words = [word for word in words if word]  # Bo‘sh so‘zlarni olib tashlash
+    
+    if not words:  # Agar matnda so‘z bo‘lmasa
         return False
-    if text_set & RUSSIAN_CYRILLIC_LETTERS:
-        return True
-    return False
+
+    russian_word_count = 0
+    total_words = len(words)
+
+    for word in words:
+        word_set = set(word)
+        
+        # Agar so‘zda ruscha xos harflar bo‘lsa, ruscha deb hisoblaymiz
+        if word_set & RUSSIAN_CYRILLIC_LETTERS:
+            russian_word_count += 1
+            continue
+        
+        # Agar so‘z faqat ruscha harflardan iborat bo‘lsa va o‘zbekcha harflar yo‘q bo‘lsa
+        if word_set.issubset(RUSSIAN_COMMON_LETTERS) and not (word_set & UZBEK_CYRILLIC_LETTERS):
+            if len(word) > 1:  # 1 harfli so‘zlarni hisoblamaymiz
+                russian_word_count += 1
+
+    # Ruscha so‘zlar foizini hisoblash
+    russian_percentage = russian_word_count / total_words
+    logging.info(f"Ruscha so‘zlar foizi: {russian_percentage:.2%} ({russian_word_count}/{total_words}) - {text}")
+    
+    return russian_percentage >= threshold
 
 # Yangi a’zo qo‘shilganda xabarni o‘chirish
 @dp.message_handler(content_types=types.ContentType.NEW_CHAT_MEMBERS)
@@ -59,7 +86,7 @@ async def delete_left_member_message(message: types.Message):
         except Exception as e:
             logging.error(f"Chiqib ketgan a’zo xabarini o‘chirishda xatolik: {e}, Guruh: {message.chat.id}")
 
-# Oddiy xabarlar uchun handler (havola va ruscha matn)
+# Oddiy xabarlar uchun handler
 @dp.message_handler(lambda message: message.chat.id in GROUP_IDS)
 async def delete_messages(message: types.Message):
     try:
@@ -80,10 +107,10 @@ async def delete_messages(message: types.Message):
             logging.info(f"Havola o‘chirildi: {message.text}, Guruh: {message.chat.id}")
             return
 
-        # Ruscha matn tekshiruvi
-        if is_russian_text(message.text):
+        # Ruscha matn tekshiruvi (70% threshold bilan)
+        if is_russian_text(message.text, threshold=0.7):
             await bot.delete_message(message.chat.id, message.message_id)
-            logging.info(f"Ruscha xabar o‘chirildi: {message.text}, Guruh: {message.chat.id}")
+            logging.info(f"Ruscha xabar o‘chirildi (70%+): {message.text}, Guruh: {message.chat.id}")
             return
 
     except Exception as e:
