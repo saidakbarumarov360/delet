@@ -115,6 +115,6 @@ async def delete_messages(message: types.Message):
         logging.error(f"Xatolik yuz berdi: {e}, Guruh: {message.chat.id}")
 
 # Botni ishga tushirish
-if name == "main":
+if __name__ == "__main__":
     logging.info("Bot ishga tushdi!")
     executor.start_polling(dp, skip_updates=True)
